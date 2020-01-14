@@ -1,27 +1,17 @@
 # PoseFromPointClouds
-Tensorflow and Pytorch implementations for pose predictions from point clouds. The Tensorflow implementation was used for producing results for the paper "Cutting Pose Prediction from Point Clouds".
+Tensorflow and Pytorch implementations for pose predictions from point clouds. The Tensorflow implementation is a simplified version of the one used for producing the results for "Cutting Pose Prediction from Point Clouds". The pytorch implementation is used for ongoing work on GNNs.
 
-# Results
-Results will vary slightly for each time test.py is run. This is caused by the random down sampling of point clouds to 1024 points.
-
-# lay
-test GT: pos error mean 0.007862 std 0.003721, ang error mean 4.484635 std 2.736516
-val GT: pos error mean 0.013454 std 0.029660, ang error mean 6.432392 std 4.884108
-train GT: pos error mean 0.007144 std 0.003334, ang error mean 3.422024 std 1.917789
-
-# hang
-train GT: pos error mean 0.025914 std 0.047910, ang error mean 3.250849 std 1.887006
-val GT: pos error mean 0.033432 std 0.022227, ang error mean 13.981595 std 18.999093
-test GT: pos error mean 0.034243 std 0.018757, ang error mean 12.051596 std 11.205911
-
-# head
-test GT: pos error mean 0.011675 std 0.006095, ang error mean 3.241150 std 1.774784
-val GT: pos error mean 0.013109 std 0.006508, ang error mean 4.566085 std 2.460330
-train GT: pos error mean 0.002753 std 0.001766, ang error mean 0.362097 std 0.228558
-
+# Usage
+1. edit train.py to select between datasets and network_type (optional)
+2. python3 train.py
+3. python3 test.py
+4. python3 evaluate.py
 
 # TODO
-1. add data download script
-2. write instructions
-2. add docker
-3. add Pytorch implementation was used for the paper "Pose from Point Clouds using Graph Neural Networks".
+1. write more instructions
+2. Add visualization scripts
+
+# Context
+The models are part of the systems shown here.
+![](/figs/training_system.png)
+![](/figs/inference_system.png)

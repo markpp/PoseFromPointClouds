@@ -10,7 +10,6 @@ sys.path.append('..')
 from src.in_out import sample_x
 
 
-
 # takes a reference vector and computes azimuth and elevation to align the view
 def vec2azel(ref, type='y', units = "deg"):
     ref = np.array(ref)
@@ -46,7 +45,7 @@ def evaluate_point_normals(gts,preds):
         idx += 1
     return np.array(pos), np.array(dist), np.array(norm), np.array(ang)[:,3]
 
-def find_n_best_med_worst(measures,n=5):
+def find_n_best_med_worst(measures,n=4):
     # rank best to worst matching samples
     b2w_idx = np.argsort(measures)
     print("best")
@@ -124,5 +123,5 @@ if __name__ == '__main__':
             ax.quiver(*p0, *nx, length=0.15, normalize=False, color='b')
             ax.quiver(*p0_, *nx_, length=0.15, normalize=False, color='r')
 
-            plt.savefig("{}_{}.png".format(i,idx), bbox_inches='tight')
-        plt.show()
+            plt.savefig("../plots/{}_{}.png".format(i,idx), bbox_inches='tight')
+        #plt.show()
