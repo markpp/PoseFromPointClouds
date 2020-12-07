@@ -7,7 +7,7 @@ from src.pointnet2_utils import PointNetSetAbstraction
 
 
 class FullSplit(nn.Module):
-    def __init__(self, type="PointNet", input_dims=3):
+    def __init__(self, type="PointNet", input_dims=3, output_dims=3):
         super(FullSplit, self).__init__()
         if type == "PointNet":
             self.p_extractor = PointNet(input_dims=input_dims)
@@ -19,7 +19,7 @@ class FullSplit(nn.Module):
             self.p_extractor = GNN(input_dims=input_dims)
             self.n_extractor = GNN(input_dims=input_dims)
         self.p_predictor = PoseNet()
-        self.n_predictor = PoseNet()
+        self.n_predictor = PoseNet(output_dims=output_dims)
 
     def forward(self, x):
         feat_p = self.p_extractor(x)
@@ -27,7 +27,6 @@ class FullSplit(nn.Module):
         feat_n = self.n_extractor(x)
         pred_n = self.n_predictor(feat_n)
         return pred_p, feat_p, pred_n, feat_n
-
 
 class PoseNet(nn.Module):
     def __init__(self, input_dims=1024, output_dims=3, dropout_prob=0.5):
@@ -45,9 +44,8 @@ class PoseNet(nn.Module):
         x = self.fc3(x)
         return x
 
-
 class PointNet(nn.Module):
-    def __init__(self, input_dims=3, output_dims=3):
+    def __init__(self, input_dims=3):
         super(PointNet, self).__init__()
         self.conv1 = torch.nn.Conv1d(input_dims, 64, 1)
         self.conv2 = torch.nn.Conv1d(64, 128, 1)
@@ -67,7 +65,7 @@ class PointNet(nn.Module):
 
 
 class PointNet2(nn.Module):
-    def __init__(self, input_dims=3, output_dims=3, radii=[0.03,0.06]):
+    def __init__(self, input_dims=3, radii=[0.03,0.06]):
         super(PointNet2, self).__init__()
         if input_dims > 3:
             self.extra_channels = True
@@ -87,14 +85,13 @@ class PointNet2(nn.Module):
         B, _, _ = x.shape
         l1_x, l1_points = self.sa1(x, norm)
         l2_x, l2_points = self.sa2(l1_x, l1_points)
-        l3_x, l3_points = self.sa3(l2_x, l2_points)
+        _, l3_points = self.sa3(l2_x, l2_points)
         feat = l3_points.view(B, 1024)
         return feat
 
 
 class GNN(nn.Module):
-    def __init__(self, k = 10, feature_dims = [64, 64, 128, 256], emb_dims = [512, 512, 256],
-                 input_dims=3, output_dims=1024):
+    def __init__(self, input_dims=3, k=10, feature_dims=[64, 64, 128, 256], emb_dims=[512, 512, 256]):
         super(GNN, self).__init__()
         self.nng = KNNGraph(k)
         self.conv = nn.ModuleList()

@@ -15,50 +15,6 @@ from tensorflow.keras import models
 #if not os.path.exists('./output/'):
 #    os.mkdir('./output/')
 
-def points2file(points,filename):
-    df = pd.DataFrame(points,columns=['x', 'y', 'z'])
-    #print(df.describe())
-    cloud = PyntCloud(df)
-    if os.path.isfile(filename):
-        os.remove(filename)
-    cloud.to_file(filename)
-
-def anno2obj(c,n,filename):
-    anno_points = []
-    c = np.array(c)
-    anno_points.append(c)
-    anno_points.append(np.add(c,np.multiply(np.array(n),0.3)))
-    df = pd.DataFrame(anno_points,columns=['x', 'y', 'z'])
-    anno_df = PyntCloud(df)
-    if os.path.isfile(filename):
-        os.remove(filename)
-    anno_df.to_file(filename)
-
-def pose2json(p0,norm,filename):
-    with open(filename, 'w') as f:
-        jo = [{
-            "pos": {
-                "x": str(p0[0]),
-                "y": str(p0[1]),
-                "z": str(p0[2])
-            },
-            "orn": {
-                "x": str(norm[0]),
-                "y": str(norm[1]),
-                "z": str(norm[2]),
-                "w": str(0.0)
-            }
-        }]
-        f.write(json.dumps(jo, indent=2, sort_keys=False))
-
-def pose2cloud(pose,filename):
-    anno_points = []
-    anno_points.append(pose[:3]) # TODO: add color
-    anno_points.append([pose[0]+pose[3],pose[1]+pose[4],pose[2]+pose[5]])
-    df = pd.DataFrame(np.array(anno_points),columns=['x', 'y', 'z'])
-    pc = PyntCloud(df)
-    pc.to_file(filename,as_text=True)
-
 def load_x_y(list_path, n_points = 1024):
     x = []
     y = []

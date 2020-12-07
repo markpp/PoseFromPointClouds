@@ -4,9 +4,9 @@ import argparse
 import numpy as np
 import os
 from itertools import islice
+from config import data_source, out_dim
 
 local_path = os.path.join(os.getcwd(), "models")
-
 
 def chunk(it, size):
     it = iter(it)
@@ -28,33 +28,32 @@ if __name__ == '__main__':
     dev = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     # load data #
-    data_source = "linemod"
-    test_X = np.load('{}/{}/{}_x_1024_ra.npy'.format("input",data_source,"test"),allow_pickle=True).astype('float32')
-    test_Y = np.load('{}/{}/{}_y.npy'.format("input",data_source,"test"),allow_pickle=True)[:,:].astype('float32')
-    val_X = np.load('{}/{}/{}_x_1024_ra.npy'.format("input",data_source,"val"),allow_pickle=True).astype('float32')
-    val_Y = np.load('{}/{}/{}_y.npy'.format("input",data_source,"val"),allow_pickle=True)[:,:].astype('float32')
-    train_X = np.load('{}/{}/{}_x_1024_ra.npy'.format("input",data_source,"train"),allow_pickle=True).astype('float32')
-    train_Y = np.load('{}/{}/{}_y.npy'.format("input",data_source,"train"),allow_pickle=True)[:,:].astype('float32')
+    #test_X = np.load('{}/{}_x_1024_ra.npy'.format(data_source,"test"),allow_pickle=True).astype('float32')
+    #test_Y = np.load('{}/{}_y.npy'.format(data_source,"test"),allow_pickle=True)[:,:out_dim].astype('float32')
+    val_X = np.load('{}/{}_x_1024_ra.npy'.format(data_source,"val"),allow_pickle=True).astype('float32')
+    val_Y = np.load('{}/{}_y.npy'.format(data_source,"val"),allow_pickle=True)[:,:out_dim].astype('float32')
+    train_X = np.load('{}/{}_x_1024_ra.npy'.format(data_source,"train"),allow_pickle=True).astype('float32')
+    train_Y = np.load('{}/{}_y.npy'.format(data_source,"train"),allow_pickle=True)[:,:out_dim].astype('float32')
 
     with torch.no_grad():
         model_path = os.path.join(local_path,"final_model.pkl")
-        if os.path.exists(model_path):                   
-            train_x, val_x, test_x = torch.from_numpy(train_X[:,:,:3]), torch.from_numpy(val_X[:,:,:3]), torch.from_numpy(test_X[:,:,:3])
-                    
+        if os.path.exists(model_path):
+            train_x, val_x = torch.from_numpy(train_X[:,:,:3]), torch.from_numpy(val_X[:,:,:3])
+            #test_x = torch.from_numpy(test_X[:,:,:3])
             datasets = []
+            #datasets.append(["test",test_x])
             datasets.append(["train",train_x])
             datasets.append(["val",val_x])
-            datasets.append(["test",test_x])
 
-            model = torch.load("{}/best_model.pkl".format(local_path))
+            model = torch.load("{}/final_model.pkl".format(local_path))
             model.eval()
             model = model.to(dev)
 
-            print_model_info(model, "{}/model.txt".format(local_path))
+            #print_model_info(model, "{}/model.txt".format(local_path))
 
             for data in datasets:
-                #print("{}, x {}".format(data[0],data[1].shape))
-                preds = np.empty((0,6), float)
+                print("{}, x {}".format(data[0],data[1].shape))
+                preds = np.empty((0,3+out_dim), float)
                 feats = np.empty((0,1024), float)
 
                 for batch_idx in list(chunk(range(len(data[1])), 64)):
@@ -69,8 +68,8 @@ if __name__ == '__main__':
                     feat = feat.data.numpy()
                     preds = np.append(preds, pred, axis=0)
                     feats = np.append(feats, feat, axis=0)
-
-                np.save("{}/{}/{}_pred.npy".format("input",data_source,data[0]),preds)
-                #np.save("{}/{}/{}_feat.npy".format("input",data_source,data[0]),feats)
+                print("preds {}".format(preds.shape))
+                np.save("{}/{}_pred.npy".format(data_source,data[0]),preds)
+                #np.save("{}/{}_feat.npy".format(data_source,data[0]),feats)
         else:
             print("model has not finished training: {}".format(local_path))

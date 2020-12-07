@@ -1,3 +1,6 @@
-
+datasets/
+results/
+models/
+plots/
 .DS_Store
 *.pyc

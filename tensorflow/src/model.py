@@ -78,7 +78,7 @@ def Encoder(feature, n_latent, name="enc"):
     e = Flatten(name='{}_e'.format(name))(e)
     return e
 
-def PoseNet(latent, name="pn"):
+def PoseNet(latent, name="pn", out_dim=3):
     p = Dense(48, activation='relu', name='{}_c0'.format(name))(latent)
     p = BatchNormalization(name='{}_bn0'.format(name))(p)
     #p = Dropout(0.25)(p)
@@ -86,11 +86,11 @@ def PoseNet(latent, name="pn"):
     p = BatchNormalization(name='{}_bn1'.format(name))(p)
     #p = Dropout(0.5)(p)
     p = Dense(8, activation='relu', name='{}_c2'.format(name))(p)
-    p = Dense(3, activation='linear', name='{}_c3'.format(name))(p)
+    p = Dense(out_dim, activation='linear', name='{}_c3'.format(name))(p)
     p = Flatten(name=name)(p)
     return p
 
-def Points2Pose(cloud_shape, n_latent):
+def Points2Pose(cloud_shape, n_latent, out_dim):
     input_points = Input(shape=cloud_shape)
     # create PointNet model
     cloud_feature_n = PointNet(input_points)
@@ -103,6 +103,6 @@ def Points2Pose(cloud_shape, n_latent):
     # center point regressor
     center = PoseNet(z_c, "center")
     # normal regressor
-    norm = PoseNet(z_n, "norm")
+    norm = PoseNet(z_n, "norm", out_dim)
     model = Model(inputs=input_points, outputs=[center, norm])
     return model, encoder_n#, encoder_c

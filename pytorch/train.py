@@ -6,10 +6,12 @@ import os
 import argparse
 import numpy as np
 import json
+import random
 
 from src.plot import plot_loss
 from src.models import FullSplit
 from src.optimizer import Lookahead, RAdam, Ralamb
+from config import data_source, out_dim
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--output-path', type=str, default='')
@@ -21,9 +23,28 @@ local_path = args.output_path or os.path.join(os.getcwd(), "models")
 num_epochs = args.num_epochs
 batch_size = args.batch_size
 
-network_type = ["PointNet", "PointNet++", "GNN"][0]
 
-def train(model, opt, dev, crit, X, Y, scheduler, alpha=0.95):
+# random sampling
+def sample_N_random(x,n_points=1024):
+    candiate_ids = [i for i in range(x.shape[0])]
+    sel = []
+    for _ in range(n_points):
+        # select idx
+        idx = random.randint(0,len(candiate_ids)-1)
+        sel.append(candiate_ids[idx])
+        # remove that idx from point_idx_options
+        del candiate_ids[idx]
+    return np.array(x[sel])
+
+
+def sample_xs(X,mode='ra'):
+    sample_x = []
+    for x in X:
+        if mode == 'ra':
+            sample_x.append(sample_N_random(x))
+    return np.array(sample_x)
+
+def train(model, opt, dev, crit, X, Y, scheduler, alpha=0.5):
     scheduler.step()
     model.train()
     total_loss = 0
@@ -32,8 +53,9 @@ def train(model, opt, dev, crit, X, Y, scheduler, alpha=0.95):
     permutation = np.random.permutation(X.shape[0])
     for i in range(0,X.shape[0], batch_size):
         indices = permutation[i:i+batch_size]
+        if len(indices) != batch_size:
+            continue
         data, label = X[indices].to(dev), Y[indices].to(dev)
-
         p, _, n, _ = model(data)
         p_loss = crit(p, label[:,:3])
         n_loss = crit(n, label[:,3:])
@@ -59,7 +81,6 @@ def evaluate(model, dev, crit, X, Y):
     for i in range(0,X.shape[0], batch_size):
         indices = permutation[i:i+batch_size]
         data, label = X[indices].to(dev), Y[indices].to(dev)
-
         p, _, n, _ = model(data)
         p_err = crit(p, label[:,:3])
         n_err = crit(n, label[:,3:])
@@ -76,7 +97,7 @@ def evaluate(model, dev, crit, X, Y):
 
 
 def train_loop(dir, dev, train_X, train_Y, val_X, val_Y):
-    model = FullSplit(type="PointNet")
+    model = FullSplit(type="PointNet", output_dims=out_dim)
     model = model.to(dev)
 
     lr = 0.005
@@ -92,6 +113,7 @@ def train_loop(dir, dev, train_X, train_Y, val_X, val_Y):
     train_crit = nn.MSELoss()
     eval_crit = nn.L1Loss()
     for epoch in range(num_epochs):
+        #train_X_ = torch.from_numpy(sample_xs(train_X))
         train_loss = train(model, opt, dev, train_crit, train_X, train_Y, scheduler)
         print('Epoch #{}, training loss {:.5f}'.format(epoch,train_loss))
         if epoch % 5 == 0:
@@ -116,22 +138,30 @@ def train_loop(dir, dev, train_X, train_Y, val_X, val_Y):
 
 
 if __name__ == '__main__':
-
     dev = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     # load data #
-    data_source = "linemod"
-
-    val_X = np.load('{}/{}/{}_x_1024_ra.npy'.format("input",data_source,"val"),allow_pickle=True).astype('float32')
-    val_Y = np.load('{}/{}/{}_y.npy'.format("input",data_source,"val"),allow_pickle=True)[:,:].astype('float32')
-
-    train_X = np.load('{}/{}/{}_x_1024_ra.npy'.format("input",data_source,"train"),allow_pickle=True).astype('float32')
-    train_Y = np.load('{}/{}/{}_y.npy'.format("input",data_source,"train"),allow_pickle=True)[:,:].astype('float32')
+    '''
+    train_X = np.load('{}/{}_X.npy'.format(data_source,"train"),allow_pickle=True)
+    train_X = sample_xs(train_X).astype('float32')
+    train_Y = np.load('{}/{}_Y.npy'.format(data_source,"train"),allow_pickle=True)[:,:3+out_dim].astype('float32')
+    val_X = np.load('{}/{}_X.npy'.format(data_source,"test"),allow_pickle=True)
+    val_X = sample_xs(val_X).astype('float32')
+    val_Y = np.load('{}/{}_Y.npy'.format(data_source,"test"),allow_pickle=True)[:,:3+out_dim].astype('float32')
+    '''
+    val_X = np.load('{}/{}_x_1024_ra.npy'.format(data_source,"val"),allow_pickle=True).astype('float32')
+    val_Y = np.load('{}/{}_y.npy'.format(data_source,"val"),allow_pickle=True)[:,:3+out_dim].astype('float32')
+    train_X = np.load('{}/{}_x_1024_ra.npy'.format(data_source,"train"),allow_pickle=True).astype('float32')
+    train_Y = np.load('{}/{}_y.npy'.format(data_source,"train"),allow_pickle=True)[:,:3+out_dim].astype('float32')
+    print(val_Y[:1])
+    print(train_Y[:1])
+    #split = 200
+    #train_x, train_y = train_X[split:,:,:3], torch.from_numpy(train_Y[split:])
+    #val_x, val_y = torch.from_numpy(sample_xs(train_X[:split,:,:3])), torch.from_numpy(train_Y[:split])
 
     train_x, train_y = torch.from_numpy(train_X[:,:,:3]), torch.from_numpy(train_Y)
     val_x, val_y = torch.from_numpy(val_X[:,:,:3]), torch.from_numpy(val_Y)
     print("# training samples {}".format(int(len(train_x))))
-
     train_loop(local_path, dev, train_x, train_y, val_x, val_y)
 
     # plot #

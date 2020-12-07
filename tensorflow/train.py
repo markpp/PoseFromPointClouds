@@ -13,8 +13,7 @@ from src.model import Points2Pose
 from src.schedules import onetenth_150_175
 from src.plot import plot_history
 
-
-
+from config import data_source, out_dim, batch_size, n_points
 
 def fit_gen(train_gen,val_gen,n_train,n_val,model,epochs=200,batch_size=64,lr=0.01,output_path="models",mode='pn'):
 
@@ -43,26 +42,24 @@ def fit_gen(train_gen,val_gen,n_train,n_val,model,epochs=200,batch_size=64,lr=0.
     model.save(os.path.join(output_path,"model_{}.h5".format(mode)))
 
 if __name__ == '__main__':
-    batch_size = 32
-    dataset = 'lay'
-    n_points = 1024
+
     from_list = False
     if from_list: # read samples from list
-        X_val, y_val = load_x_y('input/{}/val.txt'.format(dataset))
-        X_test, y_test = load_x_y('input/{}/test.txt'.format(dataset))
-        X_train, y_train = load_x_y('input/{}/train.txt'.format(dataset))
+        X_val, y_val = load_x_y('{}/val.txt'.format(data_source))
+        X_test, y_test = load_x_y('{}/test.txt'.format(data_source))
+        X_train, y_train = load_x_y('{}/train.txt'.format(data_source))
     else: # read samples from .npy
-        X_train = np.load('input/{}/train_X.npy'.format(dataset),allow_pickle=True)
-        y_train = np.load('input/{}/train_Y.npy'.format(dataset),allow_pickle=True).astype('float32')
-        X_val = np.load('input/{}/val_X.npy'.format(dataset),allow_pickle=True)
-        y_val = np.load('input/{}/val_Y.npy'.format(dataset),allow_pickle=True).astype('float32')
+        X_train = np.load('{}/{}_X.npy'.format(data_source,"train"),allow_pickle=True)
+        y_train = np.load('{}/{}_Y.npy'.format(data_source,"train"),allow_pickle=True)[:,:3+out_dim].astype('float32')
+        X_val = np.load('{}/{}_X.npy'.format(data_source,"val"),allow_pickle=True)
+        y_val = np.load('{}/{}_Y.npy'.format(data_source,"val"),allow_pickle=True)[:,:3+out_dim].astype('float32')
 
-    print("Number of samples: {} test".format(X_test.shape[0]))
+    #print("Number of samples: {} test".format(X_test.shape[0]))
     print("Number of samples: {} train, {} val".format(X_train.shape[0],X_val.shape[0]))
 
-    model, encoder = Points2Pose(cloud_shape = (n_points, 3), n_latent = 16)
+    model, encoder = Points2Pose(cloud_shape = (n_points, 3), n_latent = 16, out_dim = out_dim)
 
     # generators that samples n_points from clouds in list and make batches
     train_gen = DataGenerator(X_train, y_train, batch_size=batch_size, augment=True)
     val_gen = DataGenerator(X_val, y_val, batch_size=batch_size, augment=False)
-    fit_gen(train_gen, val_gen, 5000, X_val.shape[0], model, output_path="models/{}".format(dataset))
+    fit_gen(train_gen, val_gen, 5000, X_val.shape[0], model, output_path="models/{}".format(data_source.split('/')[-1]))
